@@ -7,7 +7,7 @@ namespace :deploy do
     on fetch(:migration_servers) do
       conditionally_migrate = fetch(:conditionally_migrate)
       info '[deploy:migrate] Checking changes in db' if conditionally_migrate
-      if conditionally_migrate && test(:diff, "-qr #{release_path}/db #{current_path}/db")
+      if conditionally_migrate && test(:diff, "-qr #{rails_root_release}/db #{rails_root_current}/db")
         info '[deploy:migrate] Skip `deploy:migrate` (nothing changed in db)'
       else
         info '[deploy:migrate] Run `rake db:migrate`'
@@ -20,11 +20,27 @@ namespace :deploy do
   desc 'Runs rake db:migrate'
   task migrating: [:set_rails_env] do
     on fetch(:migration_servers) do
-      within release_path do
+      within rails_root_release do
         with rails_env: fetch(:rails_env) do
           execute :rake, 'db:migrate'
         end
       end
+    end
+  end
+
+  def rails_root_release
+    if fetch(:rails_root)
+      release_path.join(fetch(:rails_root))
+    else
+      release_path
+    end
+  end
+
+  def rails_root_current
+    if fetch(:rails_root)
+      rails_root_current.join(fetch(:rails_root))
+    else
+      current_path
     end
   end
 

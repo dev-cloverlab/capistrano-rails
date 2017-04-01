@@ -67,6 +67,10 @@ set :conditionally_migrate, true
 # Defaults to [:web]
 set :assets_roles, [:web, :app]
 
+set :assets_prefix, 'prepackaged-assets'   # Defaults to 'assets' this should match config.assets.prefix in your
+set :rails_root, 'rails_root_dir'          # If rails root dir is in the subdirectory, set rails root dir.
+rails config/application.rb
+
 # Defaults to 'assets'
 # This should match config.assets.prefix in your rails config/application.rb
 set :assets_prefix, 'prepackaged-assets'

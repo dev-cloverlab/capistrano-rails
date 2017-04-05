@@ -38,7 +38,7 @@ namespace :deploy do
 
   def rails_root_current
     if fetch(:rails_root)
-      rails_root_current.join(fetch(:rails_root))
+      current_path.join(fetch(:rails_root))
     else
       current_path
     end

@@ -22,7 +22,7 @@ namespace :deploy do
     on fetch(:migration_servers) do
       within rails_root_release do
         with rails_env: fetch(:rails_env) do
-          execute :rake, 'db:migrate'
+          execute :rake, fetch(:migration_command)
         end
       end
     end
@@ -52,5 +52,6 @@ namespace :load do
     set :conditionally_migrate, fetch(:conditionally_migrate, false)
     set :migration_role, fetch(:migration_role, :db)
     set :migration_servers, -> { primary(fetch(:migration_role)) }
+    set :migration_command, fetch(:migration_command, 'db:migrate')
   end
 end

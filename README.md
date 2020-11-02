@@ -7,12 +7,12 @@ Rails specific tasks for Capistrano v3:
 
 ## Installation
 
-Add these lines to your application's Gemfile:
+Add these Capistrano gems to your application's Gemfile using `require: false`:
 
 ```ruby
 group :development do
-  gem 'capistrano', '~> 3.6'
-  gem 'capistrano-rails', '~> 1.2'
+  gem "capistrano", "~> 3.10", require: false
+  gem "capistrano-rails", "~> 1.6", require: false
 end
 ```
 
@@ -60,6 +60,9 @@ set :migration_role, :db
 # Defaults to the primary :db server
 set :migration_servers, -> { primary(fetch(:migration_role)) }
 
+# Defaults to `db:migrate`
+set :migration_command, 'db:migrate'
+
 # Defaults to false
 # Skip migration if files in db/migrate were not modified
 set :conditionally_migrate, true
@@ -74,6 +77,10 @@ rails config/application.rb
 # Defaults to 'assets'
 # This should match config.assets.prefix in your rails config/application.rb
 set :assets_prefix, 'prepackaged-assets'
+
+# Defaults to ["/path/to/release_path/public/#{fetch(:assets_prefix)}/.sprockets-manifest*", "/path/to/release_path/public/#{fetch(:assets_prefix)}/manifest*.*"]
+# This should match config.assets.manifest in your rails config/application.rb
+set :assets_manifests, ['app/assets/config/manifest.js']
 
 # RAILS_GROUPS env value for the assets:precompile task. Default to nil.
 set :rails_assets_groups, :assets
@@ -94,9 +101,11 @@ Make sure you enable it by setting `linked_dirs` and `linked_files` options:
 
 ```ruby
 # deploy.rb
-set :linked_dirs, fetch(:linked_dirs, []).push('log', 'tmp/pids', 'tmp/cache', 'tmp/sockets', 'vendor/bundle', 'public/system', 'public/uploads')
-set :linked_files, fetch(:linked_files, []).push('config/database.yml', 'config/secrets.yml')
+append :linked_dirs, 'log', 'tmp/pids', 'tmp/cache', 'tmp/sockets', 'vendor/bundle', '.bundle', 'public/system', 'public/uploads'
+append :linked_files, 'config/database.yml', 'config/secrets.yml'
 ```
+
+In capistrano < 3.5, before `append` was introduced, you can use `fetch` and `push` to get the same result.
 
 ### Recommendations
 
@@ -110,6 +119,26 @@ set :migration_role, :app
 
 The advantage is you won't need to deploy your application to your database
 server, and overall a better separation of concerns.
+
+#### Uploading your master.key
+
+You can use the below configuration to upload your `master.key` to the server if it isn't already present.
+
+```ruby
+append :linked_files, "config/master.key"
+
+namespace :deploy do
+  namespace :check do
+    before :linked_files, :set_master_key do
+      on roles(:app), in: :sequence, wait: 10 do
+        unless test("[ -f #{shared_path}/config/master.key ]")
+          upload! 'config/master.key', "#{shared_path}/config/master.key"
+        end
+      end
+    end
+  end
+end
+```
 
 ## Contributing
 

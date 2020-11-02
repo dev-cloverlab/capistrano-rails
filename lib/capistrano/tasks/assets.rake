@@ -88,10 +88,15 @@ namespace :deploy do
     task :restore_manifest do
       on release_roles(fetch(:assets_roles)) do
         within rails_root_release do
-          target = detect_manifest_path
-          source = rails_root_release.join('assets_manifest_backup', File.basename(target))
-          if test "[[ -f #{source} && -f #{target} ]]"
-            execute :cp, source, target
+          targets = detect_manifest_path.split(' ')
+          sources = targets.map do |target|
+            rails_root_release.join('assets_manifest_backup', File.basename(target))
+          end
+          if test(:ls, *sources) && test(:ls, *targets)
+            source_map = sources.zip(targets)
+            source_map.each do |source, target|
+              execute :cp, source, target
+            end
           else
             msg = 'Rails assets manifest file (or backup file) not found.'
             warn msg
@@ -110,12 +115,9 @@ namespace :deploy do
     end
 
     def detect_manifest_path
-      %w(
-        .sprockets-manifest*
-        manifest*.*
-      ).each do |pattern|
-        candidate = rails_root_release.join('public', fetch(:assets_prefix), pattern)
-        return capture(:ls, candidate).strip.gsub(/(\r|\n)/,' ') if test(:ls, candidate)
+      fetch(:assets_manifests).each do |candidate|
+        candidate = rails_root_release.join('public', fetch(:assets_prefix), candidate)
+        return capture(:ls, candidate).strip.gsub(/(\r|\n)/, ' ') if test(:ls, candidate)
       end
       msg = 'Rails assets manifest file not found.'
       warn msg
@@ -142,5 +144,10 @@ namespace :load do
   task :defaults do
     set :assets_roles, fetch(:assets_roles, [:web])
     set :assets_prefix, fetch(:assets_prefix, 'assets')
+    set :assets_manifests, -> {
+      %w[.sprockets-manifest* manifest*.*].map do |pattern|
+        release_path.join("public", fetch(:assets_prefix), pattern)
+      end
+    }
   end
 end
